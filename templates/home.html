@@ -1,0 +1,8 @@
+<!-- Inherits from layout.html -->
+{% extends "layout.html" %} <!-- Sends contents to parent block -->
+{% block content %}
+    {% for post in posts %} <!-- Loop the "posts" dict to show all records -->
+        <h2>{{ post.title }}</h2>
+        <p>{{ post.content }}</p>
+    {% endfor %}
+{% endblock content %}

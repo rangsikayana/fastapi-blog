@@ -1,0 +1,19 @@
+<!-- This is the parent block -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> <!-- Browser tab's title, not the content's -->
+        {% if title %}
+            FastAPI Blog - {{ title }}
+        {% else %}
+            FastAPI Blog
+        {% endif %}
+    </title>
+</head>
+<body>
+    {% block content %}
+    {% endblock content %}
+</body>
+</html>
