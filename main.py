@@ -1,13 +1,11 @@
-from email.policy import HTTP
-
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic.json_schema import JsonRef
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
+
+from schemas import PostCreate, PostResponse
 
 app = FastAPI()
 
@@ -15,7 +13,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-posts: list[dict] = [ # This runs in memory
+posts: list[dict] = [ # This runs in RAM
 	{
 		"id": 1,
 		"author": "Rangsi Kayana",
@@ -56,12 +54,30 @@ def post_page(request: Request, post_id: int): # Rquest is required by Jinja2
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
 
-@app.get("/api/posts")
-def get_post():
+@app.get("/api/posts", response_model=list[PostResponse]) # Validates post list & shows schema in /docs
+def get_posts():
     return posts
 
 
-@app.get("/api/posts/{post_id}")
+@app.post(
+    "/api/posts",
+    response_model=PostResponse, # Validates post payload & shows schema in /docs
+    status_code=status.HTTP_201_CREATED, # Replaces the default 200 success
+)
+def create_post(post: PostCreate): # PostCreate acts as type hint, returns 422 error details
+    new_id = max(p["id"] for p in posts) + 1 if posts else 1 # Generate auto incrementing id
+    new_post = { # Formats payload as the target posts' list of dicts
+        "id": new_id,
+        "author": post.author,
+        "title": post.title,
+        "content": post.content,
+        "date_posted": "31 July 2026",
+    }
+    posts.append(new_post) # Loads payload into RAM
+    return new_post
+
+
+@app.get("/api/posts/{post_id}", response_model=PostResponse) # Validates single post & shows schema in /docs
 def get_post(post_id: int): # Int type hint, otherwise returns 422 status (e.g. api/posts/one)
     for post in posts:
         if post.get("id") == post_id:
@@ -97,7 +113,7 @@ def general_http_exception_handler(request: Request, exception: StarletteHTTPExc
 
 @app.exception_handler(RequestValidationError)
 def validation_exception_handler(request: Request, exception: RequestValidationError):
-    if request.url.path.startswith("api/"):
+    if request.url.path.startswith("/api"):
         return JSONResponse( # Returns JSON for /api route
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, # RequestValidationError doesn't have status_code like Starlette
             content={"detail": exception.errors()}, # Type validation error details
