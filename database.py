@@ -1,24 +1,28 @@
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./blog.db"
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
 
-engine = create_engine(  # Conn to the DB
+engine = create_async_engine(  # Conn to the DB
     SQLALCHEMY_DATABASE_URL,
     connect_args={
         "check_same_thread": False
     },  # Disables FastAPI multi threads default specifically for SQLite
 )
 
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)  # False are set to gain control over commits
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)  # False prevents lazy loading expired obj after a commit in async
 
 
 class Base(DeclarativeBase):  # Used for creating tables
     pass
 
 
-def get_db():  # Provides sessions to routes
-    with SessionLocal() as db:  # "with" ensures clean up after HTTP response is sent
-        yield db  # Uses yield instead of return to pause exec & passes DB sess to route
+async def get_db():  # Provides sessions to routes
+    async with (
+        AsyncSessionLocal() as session
+    ):  # "with" ensures clean up after HTTP response is sent
+        yield session  # Uses yield instead of return to pause exec & passes DB sess to route

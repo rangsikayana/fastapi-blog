@@ -17,7 +17,7 @@ class User(Base):
     )  # PKs actually get indexed automatically
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
-    image_file: Mapped[str | None] = (
+    image_file: Mapped[str | None] = (  # None is required for default=None
         mapped_column(  # Stores file name (not entire path), None matches nullable=True
             String(200),
             nullable=True,
@@ -25,9 +25,13 @@ class User(Base):
         )
     )
 
+    # One to many via user.posts
     posts: Mapped[list[Post]] = relationship(
-        back_populates="author"
-    )  # One to many via user.posts
+        back_populates="author",
+        cascade="all, delete-orphan",
+    )
+    # "all" deletes posts when the user is deleted
+    # "delete-orphan" deletes posts unlinked from the user.posts relationship
 
     @property  # This is Python property, not DB
     def image_path(self) -> str:
