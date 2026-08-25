@@ -91,7 +91,7 @@ async def get_user_posts(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(  # Checks if user_id exists in DB
-        select(models.User).where(models.User.id == user_id),
+        select(models.User).where(models.User.id == user_id)
     )  # Returns SELECT * wrapped in tuple
     user = result.scalars().first()
     # scalars() unwraps result's tuple
@@ -106,7 +106,8 @@ async def get_user_posts(
     result = await db.execute(  # Gets posts belong to the user_id
         select(models.Post)
         .options(selectinload(models.Post.author))  # Eager loads models' relationship
-        .where(models.Post.user_id == user_id),
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
     )  # Returns SELECT * wrapped in tuple
     posts = result.scalars().all()
     # scalars() unwraps result's tuple

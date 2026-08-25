@@ -14,7 +14,7 @@ AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
-)  # False prevents lazy loading expired obj after a commit in async
+)  # False prevents lazy loading expired objs after a commit in async
 
 
 class Base(DeclarativeBase):  # Used for creating tables

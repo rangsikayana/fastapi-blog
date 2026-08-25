@@ -38,7 +38,7 @@ class PostBase(BaseModel):
 
 
 class PostCreate(PostBase):  # For user input, inherits from PostBase
-    user_id: int  # Temporary for manual passing, will get from auth sess later
+    user_id: int  # TEMP: For manual passing, will get from auth sess later
 
 
 class PostUpdate(BaseModel):

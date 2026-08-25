@@ -17,9 +17,11 @@ router = APIRouter()
 )  # Wraps payload in a list & shows schema in /docs
 async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
-        select(models.Post).options(
+        select(models.Post)
+        .options(
             selectinload(models.Post.author)  # Eager loads models' relationship
         )
+        .order_by(models.Post.date_posted.desc())
     )
     posts = result.scalars().all()
     # scalars() unwraps result's tuple

@@ -60,8 +60,12 @@ async def home(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(
-        select(models.Post).options(selectinload(models.Post.author)),
-    )  # selectinload eager loads models' relationship
+        select(models.Post)
+        .options(
+            selectinload(models.Post.author)
+        )  # selectinload eager loads models' relationship
+        .order_by(models.Post.date_posted.desc())
+    )
     posts = result.scalars().all()
     # scalars() unwraps result's tuple
     # all() returns either all objs (True) or None (False)
@@ -130,6 +134,7 @@ async def user_posts_page(
         select(models.Post)
         .options(selectinload(models.Post.author))  # Eager loads models' relationship
         .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
     )  # Returns SELECT * wrapped in tuple
     posts = result.scalars().all()
     # scalars() unwraps result's tuple
