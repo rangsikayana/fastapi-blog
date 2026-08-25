@@ -157,7 +157,7 @@ async def update_post_full(
 
 
 @router.patch(
-    "/{post_id}/", response_model=PostResponse
+    "/{post_id}", response_model=PostResponse
 )  # Validates a single obj & shows schema in /docs
 async def update_post_partial(
     post_id: int,  # Type hint, otherwise returns 422 unprocessable
