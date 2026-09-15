@@ -17,6 +17,9 @@ class User(Base):
     )  # PKs actually get indexed automatically
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(
+        String(200), nullable=False
+    )  # 200 is enough for argon2
     image_file: Mapped[str | None] = (  # None is required for default=None
         mapped_column(  # Stores file name (not entire path), None matches nullable=True
             String(200),
