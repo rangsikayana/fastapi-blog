@@ -66,7 +66,7 @@
             rel="manifest"
             href="{{ url_for('static', path='site.webmanifest') }}"
         />
-        <!-- Content Security Policy: Uncomment to enhance security by restricting where content can be loaded from (useful for preventing certain attacks like XSS). Update if adding external sources (e.g., Google Fonts, Bootstrap CDN, analytics, etc). -->
+        <!-- Content Security Policy: Uncomment to enhance security by restricting where content can be loaded from (useful for preventing certain attacks like XSS). Update if adding external sources (e.g., Google Fonts, Bootstrap CDN, analytics, etc.) -->
         <!-- <meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' code.jquery.com; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' images.examplecdn.com; "> -->
     </head>
     <body class="d-flex flex-column min-vh-100">
@@ -101,25 +101,41 @@
                         </div>
                         <!-- Navbar Right Side -->
                         <div class="navbar-nav">
-                            <!-- NOTE: Once auth is set up, this button will only be visible when logged in -->
-                            <button
-                                class="btn btn-outline-light mb-2 mb-md-0 me-md-2"
-                                type="button"
-                                data-bs-toggle="modal"
-                                data-bs-target="#createPostModal"
-                            >
-                                New Post
-                            </button>
-                            <a
-                                class="btn btn-outline-light mb-2 mb-md-0 me-md-2"
-                                href="#"
-                                >Login</a
-                            >
-                            <a
-                                class="btn btn-light mb-2 mb-md-0 me-md-3"
-                                href="#"
-                                >Register</a
-                            >
+                            <!-- Shown when logged in (hidden by default, shown via JS) -->
+                            <div id="loggedInNav" class="d-none">
+                                <button
+                                    class="btn btn-outline-light mb-2 mb-md-0 me-md-2"
+                                    type="button"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#createPostModal"
+                                >
+                                    New Post
+                                </button>
+                                <span
+                                    id="usernameDisplay"
+                                    class="navbar-text me-md-2"
+                                ></span>
+                                <button
+                                    class="btn btn-outline-light mb-2 mb-md-0 me-md-3"
+                                    type="button"
+                                    id="logoutBtn"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                            <!-- Shown when logged out -->
+                            <div id="loggedOutNav">
+                                <a
+                                    class="btn btn-outline-light mb-2 mb-md-0 me-md-2"
+                                    href="{{ url_for("login_page") }}"
+                                    >Login</a
+                                >
+                                <a
+                                    class="btn btn-light mb-2 mb-md-0 me-md-3"
+                                    href="{{ url_for("register_page") }}"
+                                    >Register</a
+                                >
+                            </div>
                             <div class="nav-item dropdown">
                                 <a
                                     class="nav-link dropdown-toggle"
@@ -384,11 +400,47 @@
             // Initialize
             setTheme(localStorage.getItem("theme") || "auto");
         </script>
+
+        <!-- Auth State Management -->
+        <script type="module">
+            import { getCurrentUser, logout } from "/static/js/auth.js";
+
+            // Update navbar based on auth state
+            async function updateAuthUI() {
+                const user = await getCurrentUser(); // Checks if there's a logged in user
+                const loggedInNav = document.getElementById("loggedInNav");
+                const loggedOutNav = document.getElementById("loggedOutNav");
+
+                if (user) {
+                    // Uses Bootstrap utility classes instead of inline styles for visibility
+                    // Shows loggedInNav, hides loggedOutNav
+                    loggedInNav.classList.remove("d-none");
+                    loggedInNav.classList.add("d-flex");
+                    loggedOutNav.classList.add("d-none");
+                    document.getElementById("usernameDisplay").textContent =
+                        user.email; // Displays the user's email
+                } else {
+                    // Does the opposite for logged-out state
+                    loggedInNav.classList.add("d-none");
+                    loggedInNav.classList.remove("d-flex");
+                    loggedOutNav.classList.remove("d-none");
+                }
+            }
+
+            // Logout handler, runs the imported logout func
+            document
+                .getElementById("logoutBtn")
+                .addEventListener("click", logout);
+
+            // Update UI on page load
+            updateAuthUI();
+        </script>
+
         <!-- Create Post Form handler -->
         <script type="module">
             // "module" allows statement imports
+            // Import helpers
             import {
-                // Utility funcs (helpers)
                 getErrorMessage,
                 hideModal,
                 showModal,

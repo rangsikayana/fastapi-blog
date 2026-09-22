@@ -85,7 +85,7 @@ async def login_for_access_token(
     result = await db.execute(
         select(models.User).where(
             func.lower(models.User.email) == form_data.username.lower()
-        )  # OAuth2PasswordRequestForm uses 'username' field, but treated as email
+        )  # OAuth2PasswordRequestForm expects 'username' field, but used for email
     )
     user = result.scalars().first()
 
