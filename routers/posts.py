@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
+from auth import CurrentUser
 from database import get_db
 from schemas import PostCreate, PostResponse, PostUpdate
 
@@ -36,28 +37,14 @@ async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
     status_code=status.HTTP_201_CREATED,  # Replaces the default 200 OK
 )
 async def create_post(
-    post: PostCreate,  # PostCreate acts as type hint, returns 422 error details
+    post: PostCreate,
+    current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(
-        select(models.User).where(
-            models.User.id == post.user_id
-        )  # Checks if user is registered
-    )  # Returns SELECT * wrapped in tuple
-    user = result.scalars().first()
-    # scalars() unwraps result's tuple
-    # first() returns either the first obj (True) or None (False)
-
-    if not user:  # Raises error if None
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
     new_post = models.Post(
         title=post.title,
         content=post.content,
-        user_id=post.user_id,
+        user_id=current_user.id,  # Assigns ownership from the active sess
     )
     db.add(new_post)  # Staging new data is necessary for insert
     # Uses await for DB ops that do I/O
@@ -103,6 +90,7 @@ async def get_post(
 async def update_post_full(
     post_id: int,  # Type hint, otherwise returns 422 unprocessable
     post_data: PostCreate,  # Uses PostCreate since it contains all fields for full update
+    current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(
@@ -120,27 +108,14 @@ async def update_post_full(
             detail="Post not found",
         )
 
-    if (
-        post_data.user_id != post.user_id
-    ):  # Checks if the mismatched user_id refers to other author
-        result = await db.execute(
-            select(models.User).where(
-                models.User.id == post_data.user_id
-            ),  # Returns the author of that user_id, allowing post ownership transfer
-        )  # Returns SELECT * wrapped in tuple
-        user = result.scalars().first()
-        # scalars() unwraps result's tuple
-        # first() returns either the first obj (True) or None (False)
-
-        if not user:  # If the changed user_id doesn't exist (None)
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+    if post.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this post",
+        )
 
     post.title = post_data.title
     post.content = post_data.content
-    post.user_id = post_data.user_id
 
     # No need to stage modified data from DB for update
     # Uses await for DB ops that do I/O
@@ -161,7 +136,8 @@ async def update_post_full(
 )  # Validates a single obj & shows schema in /docs
 async def update_post_partial(
     post_id: int,  # Type hint, otherwise returns 422 unprocessable
-    post_data: PostUpdate,  # Uses PostUpdate to update only title & content
+    post_data: PostUpdate,  # Uses PostUpdate to allow partial update
+    current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(
@@ -177,6 +153,12 @@ async def update_post_partial(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found",
+        )
+
+    if post.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this post",
         )
 
     update_data = post_data.model_dump(  # Converts post_data into dict
@@ -205,6 +187,7 @@ async def update_post_partial(
 )
 async def delete_post(
     post_id: int,
+    current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(
@@ -222,7 +205,11 @@ async def delete_post(
             detail="Post not found",
         )
 
-    # Post ownership check will be added later when integrating auth
+    if post.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this post",
+        )
 
     # Uses await for DB ops that do I/O
     await db.delete(post)  # Interacts with DB sess to stage delete
